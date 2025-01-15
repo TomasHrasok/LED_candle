@@ -7,6 +7,12 @@
 *.obj
 *.elf
 
+# Project files
+.cproject
+.project
+.settings
+Release
+
 # Linker output
 *.ilk
 *.map
