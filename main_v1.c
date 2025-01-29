@@ -4,6 +4,9 @@
  *  Created on: Dec 4, 2024
  *      Author: tomi
  *
+ *		v1: Using Separate GPIO output to power Photo transistor
+ *		v2: Using internal Pull Up resistor on ADC pin that sense Photo transistor
+ *
  *      Temporary MCU: ATtiny2313A
  *      Final MCU: 	   ATtiny44A
  *      LED candle driven by:
@@ -60,6 +63,8 @@
  * 		 lfuse:0xE2 >>	Divides clk by 8, Clock source >> 500KHz
  * 		 IDLE current reached 0.23mA
  *
+ * 		 lfuse updated to 0xE4 >> 8MHz clock
+ *
  */
 
 #ifdef test
@@ -98,13 +103,13 @@ ISR (INT0_IRQ)				//INT0 external pin low level interrupt occurred
 		State=GetLightCondition;
 	}
 	cli();		// disable further INT0 events until processing finished
-//	LED_TOGGLE();
-//	_delay_ms(80);
-//	LED_TOGGLE();
-//	_delay_ms(80);
-//	LED_TOGGLE();
-//	_delay_ms(80);
-//	LED_TOGGLE();
+	LED_TOGGLE();
+	_delay_ms(180);
+	LED_TOGGLE();
+	_delay_ms(180);
+	LED_TOGGLE();
+	_delay_ms(180);
+	LED_TOGGLE();
 }
 
 
@@ -184,9 +189,9 @@ int main()
 			}
 			case UpdateTimer:
 			{
-//				LED_TOGGLE();
-//				_delay_ms(10);
-//				LED_TOGGLE();
+				LED_TOGGLE();
+				_delay_ms(10);
+				LED_TOGGLE();
 				//execution triggered every 8 seconds
 				if(CurrentSeconds >= TRIGGER_4MINUTES)
 				{
@@ -239,7 +244,11 @@ void Ports_Init(void)		//Initialization of I/O ports
 	//turn off not used peripherals
 	ACSR |=_BV(ACD);					// turn of Analog comparator permanently
 //	DIDR0 |=_BV(AIN1D)|_BV(AIN0D);		// deactivate Digital inputs of PB1, PB0
+#if defined (__AVR_ATtiny44A__)
 	PRR |=_BV(PRTIM0)|_BV(PRTIM1)|_BV(PRUSI)|_BV(PRADC);	//turn off timers, ADC, USI, UART
+#elif defined (__AVR_ATtiny2313A__)
+	PRR |=_BV(PRTIM0)|_BV(PRTIM1)|_BV(PRUSI)|_BV(PRUSART);	//turn off timers, ADC, USI, UART
+#endif
 
 	// LED init blink sequence
 	LED_ON();
@@ -265,6 +274,8 @@ bool IsDayLight(void)			//During night return=0, during day return =1
 	// Enable Vcc for opto-transistor
 	Light_SensorVcc_Port |=_BV(Light_SensorVcc);		// Set IO state to HIGH
 	Light_SensorVcc_DIR  |=_BV(Light_SensorVcc);		// Set IO DIR to OUTPUT
+// for testing TODO remove
+	Light_Sensor_Port  |=_BV(Light_Sensor);		// Set IO DIR to OUTPUT
 
 	_delay_ms(5);
 	// read opto-transistor state
@@ -274,8 +285,8 @@ bool IsDayLight(void)			//During night return=0, during day return =1
 	}
 
 	// Disable Vcc for opto-transistor
-	Light_SensorVcc_Port &=~_BV(Light_SensorVcc);		// Set IO state to LOW
-	Light_SensorVcc_DIR  &=~_BV(Light_SensorVcc);		// Set IO DIR to INPUT, really necessary? TODO maybe output to decrease PWR?
+//TODO	Light_SensorVcc_Port &=~_BV(Light_SensorVcc);		// Set IO state to LOW
+//TODO	Light_SensorVcc_DIR  &=~_BV(Light_SensorVcc);		// Set IO DIR to INPUT, really necessary? TODO maybe output to decrease PWR?
 
 	return DayLight;
 }

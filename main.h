@@ -8,11 +8,12 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
-//#define test		// debug only, shorter timeouts
+#define test		// debug only, shorter timeouts
 
 #if defined (__AVR_ATtiny44A__)
 	/*----- Declaration of Outputs ------*/
-	#define LED						PA6		// (OC1A) LED output pin, 16bit PWM Timer1 output
+//	#define LED						PA6		// (OC1A) LED output pin, 16bit PWM Timer1 output
+	#define LED						PA7		// (OC0B) LED output pin, 8bit PWM Timer0 output
 	#define LED_Port				PORTA 	// port definition
 	#define LED_Port_DIR			DDRA 	// port direction definition
 
