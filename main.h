@@ -8,7 +8,8 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
-#define test		// debug only, shorter timeouts
+//#define test		// debug only, shorter timeouts
+//#define LED_debug	// LED blink-out the status
 
 #if defined (__AVR_ATtiny44A__)
 	/*----- Declaration of Outputs ------*/
@@ -67,9 +68,14 @@
 #endif
 
 #ifdef test
-	#define TRIGGER_4MINUTES		8	// check light every cycle
+	#define LIGHT_CHECK_INTERVAL		2		// check light every cycle
+	#define	WDT_TIMEOUT					2		// Watchdog trigger period
+	#define DEFAULT_LIGHT_TIME			60		// seconds
 #else
-	#define TRIGGER_4MINUTES		16	// 240 seconds = 4 minutes
+	#define LIGHT_CHECK_INTERVAL		120		// 240 seconds = 4 minutes
+	#define	WDT_TIMEOUT					8		// Watchdog trigger period
+	#define DEFAULT_LIGHT_TIME			5*3600	// 5 hours
+//	#define DEFAULT_LIGHT_TIME			1*3600	// 1 hours
 #endif //debug
 
 #define INT0_set_logical_change()		MCUCR = (MCUCR & ~(_BV(ISC01)|_BV(ISC00))) | _BV(ISC00);		// INT0 executed on any log change

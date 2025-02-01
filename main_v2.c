@@ -84,13 +84,10 @@
  *
  */
 
-#ifdef test
-
-#else
-
-#endif
-
 volatile uint8_t CurrentSeconds = 0;
+uint16_t DayTimeDurationSeconds = 0;			// max. 18 hours >> overflow
+uint16_t NightLightTimeSeconds = DEFAULT_LIGHT_TIME;		// Adaptive hours of Candle Light
+uint16_t CurrentOnTime = 0;									// Measure LED ON time
 
 tStatus State;
 
@@ -105,7 +102,7 @@ ISR (WDT_OwerFlow_IRQ)				//watchdog interrupt
 {
 	sleep_disable();		//turn off sleep mode
 	WDT_SET_IRQ_mode();		//reactivate IRQ instead of reset
-	CurrentSeconds+=8;			// 8 seconds passed
+	CurrentSeconds+=WDT_TIMEOUT;			// 8 seconds passed
 	State = UpdateTimer;
 }
 
@@ -120,13 +117,15 @@ ISR (INT0_IRQ)				//INT0 external pin low level interrupt occurred
 		State=GetLightCondition;
 	}
 	cli();		// disable further INT0 events until processing finished
+#ifdef LED_debug
 	LED_TOGGLE();
-	_delay_ms(180);
+	_delay_ms(60);
 	LED_TOGGLE();
-	_delay_ms(180);
+	_delay_ms(60);
 	LED_TOGGLE();
-	_delay_ms(180);
+	_delay_ms(60);
 	LED_TOGGLE();
+#endif
 }
 
 
@@ -164,11 +163,24 @@ int main()
 				if(IsDayLight() == true)
 				{
 					State = FadeToPwOFF;
+					// It's day, reset Night LED ON timer
+					CurrentOnTime = 0;
+					// Measure dayTime
+					DayTimeDurationSeconds += LIGHT_CHECK_INTERVAL;
+				}
+				else if(CurrentOnTime < NightLightTimeSeconds)
+				{
+					// It's night & LED ON timer still runs
+					LED_ON();
+					CurrentOnTime += LIGHT_CHECK_INTERVAL;
+					State = PwOFF;		// go to IDLE state
+					//TODO Calculate NightLightTime?
+					DayTimeDurationSeconds = 0;		// reset daytime counter?
 				}
 				else
 				{
-					LED_ON();
-					State = PwOFF;		// go to IDLE state
+					// It's night and LED ON timer finished
+					State = FadeToPwOFF;
 				}
 				break;
 			}
@@ -193,6 +205,7 @@ int main()
 				{
 					// Candle tilted, WDT OFF, full PowerDown
 					LED_OFF();
+					CurrentOnTime = 0;		// Reset ON timer
 					WDT_disable();
 					INT0_set_low_level();
 					set_sleep_mode(SLEEP_MODE_PWR_DOWN);
@@ -205,11 +218,14 @@ int main()
 			}
 			case UpdateTimer:
 			{
-				LED_TOGGLE();
-				_delay_ms(10);
-				LED_TOGGLE();
-				//execution triggered every 8 seconds
-				if(CurrentSeconds >= TRIGGER_4MINUTES)
+				#ifdef LED_debug
+					LED_TOGGLE();
+					_delay_ms(10);
+					LED_TOGGLE();
+				#endif
+
+				// timer for Daylight check
+				if(CurrentSeconds >= LIGHT_CHECK_INTERVAL)
 				{
 					// time to measure actual light conditions
 					CurrentSeconds=0;
@@ -268,7 +284,7 @@ void Ports_Init(void)		//Initialization of I/O ports
 	// LED init blink sequence
 	LED_ON();
 	_delay_ms(450);
-	LED_OFF();
+//	LED_OFF();
 }
 
 bool IsSwitchActive(void)		//When LED candle tilted, return false, otherwise true
